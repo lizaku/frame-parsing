@@ -47,4 +47,4 @@ def predicates(in_f):
     
 
 if __name__ == '__main__':
-    predicates('parsed_framebank_roles_small_small.json')
+    predicates('parsed_framebank_roles_small.json')
