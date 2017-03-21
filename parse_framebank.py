@@ -48,8 +48,8 @@ def parse_framebank_examples(in_f, out_f):
         header = next(reader)
         i = 0
         for line in reader:
-            #if i == 5000:
-            #    break
+            if i == 25000:
+                break
             try:
                 i += 1
                 print(i)
@@ -107,5 +107,5 @@ def parse_framebank_roles(parsed, in_f, out_f):
 
 
 if __name__ == '__main__':
-    #parse_framebank_examples('exampleindex.csv', 'parsed_framebank.csv')    
-    parse_framebank_roles('parsed_framebank.json', 'framebank_anno_ex_items_fixed.txt', 'parsed_framebank_roles.csv')
+    parse_framebank_examples('exampleindex.csv', 'parsed_framebank_big.csv')    
+    parse_framebank_roles('parsed_framebank_big.json', 'framebank_anno_ex_items_fixed.txt', 'parsed_framebank_roles_big.csv')

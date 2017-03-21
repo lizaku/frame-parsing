@@ -3,6 +3,16 @@ import os
 import json
 from collections import OrderedDict
 
+def map_roles(role):
+    if role:
+        role = role.strip()
+    if role in roles:
+        return roles[role]
+    else:
+        print(role)
+        return role
+    
+
 
 def predicates(in_f):
     preds = {}
@@ -73,19 +83,21 @@ def arguments(in_f):
                 prev_lex, prev_gr = prev_word[0:2]
             if instance[-1] is None and instance[-2] is None:
                 n_word += 1
-                args[(ex, w)] = [lex, pos, gram, sem, sem2, n_word, prev_gr, prev_lex, 'noclass']
+                #args[(ex, w)] = [lex, pos, gram, sem, sem2, n_word, prev_gr, prev_lex, '0']
                 prev_word = instance
                 continue
-            if instance[-1] != 'Предикат' and instance[-2] != '-':
-                print(role)
+            if instance[-1] != 'Предикат' and instance[-2] != '-' and instance[-2] is not None and instance[-2] != '?':
+                role = map_roles(role)
                 args[(ex, w)] = [lex, pos, gram, sem, sem2, n_word, prev_gr, prev_lex, role]
                 prev_word = instance
             n_word += 1
-    with open('arguments.csv', 'w', encoding='utf-8') as p:
-        header = ('ExID', 'Wordform', 'Lex', 'POS', 'Gram', 'Sem', 'Sem2', 'WordID', 'prev_lex', 'prev_gr', 'Class')
-        p.write('\t'.join(header) + '\n')
+    with open('arguments_roles_merged.csv', 'w', encoding='utf-8') as p:
+        writer = csv.writer(p, delimiter='\t')
+        header = ('ExID', 'Wordform', 'Lex', 'POS', 'Gram', 'Sem', 'Sem2', 'WordID', 'prev_gr', 'prev_lex', 'Class')
+        writer.writerow(header)
         for a in args:
-            p.write('\t'.join(list(a) + [str(x) for x in args[a]]) + '\n')
+            row = list(a) + [str(x) for x in args[a]]
+            writer.writerow(row)
 
 
 def together(in_f):
@@ -124,6 +136,7 @@ def together(in_f):
                 prev_word = instance
                 continue
             if instance[-1] != 'Предикат' and instance[-2] != '-':
+                role = map_roles(role)
                 args[(ex, w)] = [lex, pos, gram, sem, sem2, n_word, prev_gr, prev_lex, role]
                 prev_word = instance
             n_word += 1
@@ -135,6 +148,12 @@ def together(in_f):
     
 
 if __name__ == '__main__':
+    roles = {}
+    with open('Roles.csv', 'r', encoding='utf-8') as r:
+        reader = csv.reader(r, delimiter=',')
+        header = next(reader)
+        for row in reader:
+            roles[row[0]] = row[1]
     #predicates('parsed_framebank_roles_small.json')
-    #arguments('parsed_framebank_roles_small.json')
-    together('parsed_framebank_roles_small.json')
+    arguments('parsed_framebank_roles_big.json')
+    #together('parsed_framebank_roles.json')
