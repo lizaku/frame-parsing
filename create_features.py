@@ -83,15 +83,15 @@ def arguments(in_f):
                 prev_lex, prev_gr = prev_word[0:2]
             if instance[-1] is None and instance[-2] is None:
                 n_word += 1
-                #args[(ex, w)] = [lex, pos, gram, sem, sem2, n_word, prev_gr, prev_lex, '0']
+                args[(ex, w)] = [lex, pos, gram, sem, sem2, n_word, prev_gr, prev_lex, '0']
                 prev_word = instance
                 continue
             if instance[-1] != 'Предикат' and instance[-2] != '-' and instance[-2] is not None and instance[-2] != '?':
-                role = map_roles(role)
-                args[(ex, w)] = [lex, pos, gram, sem, sem2, n_word, prev_gr, prev_lex, role]
+                #role = map_roles(role)
+                args[(ex, w)] = [lex, pos, gram, sem, sem2, n_word, prev_gr, prev_lex, '1']
                 prev_word = instance
             n_word += 1
-    with open('arguments_roles_merged.csv', 'w', encoding='utf-8') as p:
+    with open('arguments.csv', 'w', encoding='utf-8') as p:
         writer = csv.writer(p, delimiter='\t')
         header = ('ExID', 'Wordform', 'Lex', 'POS', 'Gram', 'Sem', 'Sem2', 'WordID', 'prev_gr', 'prev_lex', 'Class')
         writer.writerow(header)
@@ -153,7 +153,7 @@ if __name__ == '__main__':
         reader = csv.reader(r, delimiter=',')
         header = next(reader)
         for row in reader:
-            roles[row[0]] = row[1]
-    #predicates('parsed_framebank_roles_small.json')
+            roles[row[0]] = row[2]
+    #predicates('parsed_framebank_roles_big.json')
     arguments('parsed_framebank_roles_big.json')
     #together('parsed_framebank_roles.json')
