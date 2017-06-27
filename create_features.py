@@ -2,6 +2,8 @@ import csv
 import os
 import json
 from collections import OrderedDict
+import subprocess as sp
+from conllu.parser import parse, parse_tree
 
 def map_roles(role):
     if role:
@@ -9,8 +11,95 @@ def map_roles(role):
     if role in roles:
         return roles[role]
     else:
-        print(role)
         return role
+
+
+def cleansed_text(fname):
+    with open(fname) as f_in:
+        contents = f_in.read()
+        text = re.sub('<[^>]*>', '', contents)
+        with open(TEXT_PATH, 'a') as f_out:
+            f_out.write(text + '\n')
+                
+
+def process_conllu(inp):
+    tree = parse_tree(inp)
+    root = tree[0]
+    data = {}
+    #path = 0
+    for const in depth_first(root):
+        w = const[0]['form']
+        deprel = const[0]['deprel']
+        data[w] = deprel
+    return data
+        
+def depth_first(node):
+    yield node
+    for child in node[1]:
+        for n in depth_first(child):
+            yield n
+
+
+def breadth_first(node): # not finished
+    yield node
+    last = node
+    for child in node[1]:
+        yield child
+        last = child
+    if last == node:
+        return
+
+
+def features(ex):
+    args = OrderedDict()
+    # lex+, pos+, gram+, prev_gr+, prev_lex+, path from predicate+, 
+    # syntrel with parent+, lemma of a predicate+, preposition+,
+    # embedding for a predicate, embedding for an argument
+    lex, pos, gram, prev_gr, prev_lex, rel, pred_lemma = [None]*7
+    sent = ' '.join(x for x in ex)
+    p1 = sp.Popen(["echo", sent], stdout=sp.PIPE)
+    p2 = sp.Popen(["/home/lizaku/Programs/udpipe/src/udpipe", "--tokenize", "--tag", "--parse", 
+                   "/home/lizaku/Programs/udpipe/UD_English/en.udpipe"], stdin=p1.stdout, stdout=sp.PIPE)
+    p1.stdout.close()  # Allow p1 to receive a SIGPIPE if p2 exits.
+    output = p2.communicate()[0].decode('utf-8')
+    synt_data = process_conllu(output)
+    n_word = 0
+    for w in ex:
+        try:
+            rel = synt_data[w]
+        except KeyError:
+            pass
+        if n_word == 0:
+            prev_word, prev_gr, prev_lex = None, None, None
+        instance = ex[w]
+        try:
+            lex, gr, sem, sem2, role, rank = instance
+        except:
+            instance = instance[:7] + instance[8:]
+        try:
+            pos, gram = gr.split(' ', maxsplit=1)
+        except:
+            try:
+                pos, gram = gr.split(',', maxsplit=1)
+            except:
+                pos, gram = gr, None
+        if prev_word:
+            prev_lex, prev_gr = prev_word[0:2]
+            #if 'PR' in prev_gr:
+            #    prep = 
+        if instance[-1] is None and instance[-2] is None:
+            cl = 'noclass'
+        elif instance[-1] == 'Предикат':
+            cl = 'Предикат'
+        elif instance[-1] != 'Предикат' and instance[-2] != '-':
+            cl = 'Аргумент'
+            #role = map_roles(role)
+        d = [lex, pos, gram, prev_gr, prev_lex, rel, pred_lemma, cl]
+        args[w] = d
+        prev_word = instance
+        #print(w, d)
+        n_word += 1
+    return args
     
 
 
@@ -56,7 +145,7 @@ def predicates(in_f):
             p.write('\t'.join(list(pr) + [str(x) for x in preds[pr]]) + '\n')
             
 def arguments(in_f):
-    args = {}
+    args = OrderedDict()
     with open(in_f, 'r', encoding='utf-8') as f:
         js = f.read()
     examples = json.loads(js, object_pairs_hook=OrderedDict)
@@ -137,7 +226,7 @@ def together(in_f):
                 continue
             if instance[-1] != 'Предикат' and instance[-2] != '-':
                 role = map_roles(role)
-                args[(ex, w)] = [lex, pos, gram, sem, sem2, n_word, prev_gr, prev_lex, role]
+                args[(ex, w)] = [lex, pos, gram, sem, sem2, n_word, prev_lex, prev_gr, role]
                 prev_word = instance
             n_word += 1
     with open('arguments_predicates.csv', 'w', encoding='utf-8') as p:
@@ -145,6 +234,20 @@ def together(in_f):
         p.write('\t'.join(header) + '\n')
         for a in args:
             p.write('\t'.join(list(a) + [str(x) for x in args[a]]) + '\n')
+            
+def arg_pred(in_f, out_f):
+    args = OrderedDict()
+    with open(in_f, 'r', encoding='utf-8') as f:
+        js = f.read()
+    examples = json.loads(js, object_pairs_hook=OrderedDict)
+    with open(out_f, 'w', encoding='utf-8') as p:
+        header = ('word', 'lex', 'pos', 'gram', 'prev_gr', 'prev_lex', 'rel', 'pred_lemma', 'class')
+        p.write('\t'.join(header) + '\n')
+    for ex in examples:
+        args = features(examples[ex])
+        with open(out_f, 'a', encoding='utf-8') as p:
+            for a in args:
+                p.write('\t'.join([a] + [str(x) for x in args[a]]) + '\n')
     
 
 if __name__ == '__main__':
@@ -155,5 +258,6 @@ if __name__ == '__main__':
         for row in reader:
             roles[row[0]] = row[2]
     #predicates('parsed_framebank_roles_big.json')
-    arguments('parsed_framebank_roles_big.json')
+    arg_pred('parsed_framebank_roles_big.json', 'arg_pred_big.csv')
+    #arguments('parsed_framebank_roles_big.json')
     #together('parsed_framebank_roles.json')

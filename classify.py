@@ -11,6 +11,7 @@ from sklearn import grid_search
 import csv
 import numpy
 from scipy import interp
+from sklearn.externals import joblib
 
 def import_csv(path):
     """
@@ -51,7 +52,6 @@ def import_as_dict(path):
 
         # read things from csv
         for row in reader:
-            #print(row)
             data.append(dict(zip(header[:-1], row[:-1])))  # make a dict of feature : value
             target.append(row[-1])
 
@@ -60,6 +60,7 @@ def import_as_dict(path):
 
         # convert categorical features to floats
         data_matrix = vec.fit_transform(data)
+        v = vec.transform(data[1])
 
         # convert targets to numpy array as strings
         target_matrix = numpy.array(target)
@@ -67,6 +68,7 @@ def import_as_dict(path):
         # save converter to use in prediction
         #joblib.dump(vec, 'feature_transformer.pkl')
     #target_names = set(target)
+    joblib.dump(vec, 'feature_transformer.pkl')
     return data_matrix, target_matrix #, target_names
     
 
@@ -76,7 +78,7 @@ if __name__ == '__main__':
 
     # import data
     print("Import data")
-    data, target = import_as_dict('arguments_roles_merged.csv')
+    data, target = import_as_dict('arg_pred_small.csv')
     print(data.shape, target.shape)
     # todo early stopping
 
@@ -93,4 +95,5 @@ if __name__ == '__main__':
     y_score = clf.fit(data_train, target_train) #.decision_function(data_test)
     y_true, y_pred = target_test, clf.predict(data_test)
     print(classification_report(y_true, y_pred))
+    joblib.dump(clf, 'frame_parser.pkl')
     #print(y_score)
