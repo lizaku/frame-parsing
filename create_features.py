@@ -5,6 +5,9 @@ from collections import OrderedDict
 import subprocess as sp
 from conllu.parser import parse, parse_tree
 
+UDPIPE = "/home/lizaku/Programs/udpipe/src/udpipe"
+PATH = "/home/lizaku/Programs/udpipe/UD_Russian/ru.udpipe"
+
 def map_roles(role):
     if role:
         role = role.strip()
@@ -56,10 +59,11 @@ def features(ex):
     # syntrel with parent+, lemma of a predicate+, preposition+,
     # embedding for a predicate, embedding for an argument
     lex, pos, gram, prev_gr, prev_lex, rel, pred_lemma = [None]*7
+    cl = 'noclass'
     sent = ' '.join(x for x in ex)
     p1 = sp.Popen(["echo", sent], stdout=sp.PIPE)
-    p2 = sp.Popen(["/home/lizaku/Programs/udpipe/src/udpipe", "--tokenize", "--tag", "--parse", 
-                   "/home/lizaku/Programs/udpipe/UD_English/en.udpipe"], stdin=p1.stdout, stdout=sp.PIPE)
+    p2 = sp.Popen([UDPIPE, "--tokenize", "--tag", "--parse", 
+                   PATH], stdin=p1.stdout, stdout=sp.PIPE)
     p1.stdout.close()  # Allow p1 to receive a SIGPIPE if p2 exits.
     output = p2.communicate()[0].decode('utf-8')
     synt_data = process_conllu(output)
@@ -82,7 +86,7 @@ def features(ex):
             try:
                 pos, gram = gr.split(',', maxsplit=1)
             except:
-                pos, gram = gr, None
+                pos, gram = None, None
         if prev_word:
             prev_lex, prev_gr = prev_word[0:2]
             #if 'PR' in prev_gr:
@@ -93,7 +97,7 @@ def features(ex):
             cl = 'Предикат'
         elif instance[-1] != 'Предикат' and instance[-2] != '-':
             cl = 'Аргумент'
-            #role = map_roles(role)
+            cl = map_roles(role)
         d = [lex, pos, gram, prev_gr, prev_lex, rel, pred_lemma, cl]
         args[w] = d
         prev_word = instance
@@ -176,7 +180,7 @@ def arguments(in_f):
                 prev_word = instance
                 continue
             if instance[-1] != 'Предикат' and instance[-2] != '-' and instance[-2] is not None and instance[-2] != '?':
-                #role = map_roles(role)
+                role = map_roles(role)
                 args[(ex, w)] = [lex, pos, gram, sem, sem2, n_word, prev_gr, prev_lex, '1']
                 prev_word = instance
             n_word += 1
@@ -258,6 +262,7 @@ if __name__ == '__main__':
         for row in reader:
             roles[row[0]] = row[2]
     #predicates('parsed_framebank_roles_big.json')
-    arg_pred('parsed_framebank_roles_big.json', 'arg_pred_big.csv')
+    arg_pred('parsed_framebank_roles_big.json', 'roles_syntax.csv')
     #arguments('parsed_framebank_roles_big.json')
     #together('parsed_framebank_roles.json')
+

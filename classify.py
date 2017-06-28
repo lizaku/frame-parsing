@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     # import data
     print("Import data")
-    data, target = import_as_dict('arg_pred_small.csv')
+    data, target = import_as_dict('arguments_roles_merged.csv')
     print(data.shape, target.shape)
     # todo early stopping
 
